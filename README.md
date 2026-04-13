@@ -1,8 +1,11 @@
 # 🎵 Music Recommender Simulation
 
+![Screenshot of recommender output](../image.png)
+![Top 5 reccommendation for Conflicted Pop](image-1.png)
+
 ## Project Summary
 
-In this project you will build and explain a small music recommender system.
+This version loads songs from `data/songs.csv` and uses a simple content-based recommender to match songs to a user's taste profile. It compares genre, mood, energy, valence, danceability, and acousticness to produce a ranked list of the best songs. The app also explains why each recommendation was chosen so the output is easy to understand.
 
 Your goal is to:
 
@@ -11,23 +14,59 @@ Your goal is to:
 - Evaluate what your system gets right and wrong
 - Reflect on how this mirrors real world AI recommenders
 
-Replace this paragraph with your own summary of what your version does.
-
 ---
 
 ## How The System Works
 
-Explain your design in plain language.
+### The Concept
+Real-world recommenders (Spotify, TikTok) work by comparing what users have liked in the past with songs they haven't heard yet. This system finds songs that are **similar to past favorites** based on audio features. Our version uses **content-based filtering**: instead of comparing user behavior, we compare the actual audio properties of songs. We prioritize **genre and mood matches** (because users typically like the same type of music) and then fine-tune recommendations with **energy levels and emotional tone** to find songs that feel just right.
 
-Some prompts to answer:
+### Song Features (What We Analyze)
+Each `Song` object contains:
+- **genre** - Type of music (pop, rock, lofi, jazz, etc.)
+- **mood** - Emotional feel (happy, chill, intense, relaxed, etc.)
+- **energy** - How intense/exciting (0.0-1.0 scale)
+- **valence** - How positive/cheerful (0.0-1.0 scale)
+- **danceability** - How suitable for dancing (0.0-1.0 scale)
+- **acousticness** - Acoustic vs. electronic (0.0-1.0 scale)
+- Plus metadata: id, title, artist, tempo_bpm
 
-- What features does each `Song` use in your system
-  - For example: genre, mood, energy, tempo
-- What information does your `UserProfile` store
-- How does your `Recommender` compute a score for each song
-- How do you choose which songs to recommend
+### User Profile (What We Know About Users)
+Each `UserProfile` stores:
+- **favorite_genre** - Their preferred music type
+- **favorite_mood** - Their preferred emotional tone
+- **target_energy** - How intense they like songs
+- **likes_acoustic** - Whether they prefer acoustic or electronic sounds
 
-You can include a simple diagram or bullet list if helpful.
+### Scoring Algorithm
+For each song, we calculate a **similarity score** (0-1):
+1. **Genre match**: Exact match = 1.0, no match = 0.0
+2. **Mood match**: Exact match = 1.0, no match = 0.0  
+3. **Energy match**: `1 - |song_energy - user_target_energy|` (rewards closeness)
+4. **Valence match**: `1 - |song_valence - user_target_valence|`
+5. **Danceability match**: `1 - |song_danceability - user_target_danceability|`
+6. **Acousticness preference**: reward high acousticness if the user likes acoustic music, otherwise reward low acousticness
+7. **Combine with weights**: Genre (25%) + Mood (20%) + Energy (20%) + Valence (15%) + Danceability (12%) + Acousticness (8%)
+
+### Algorithm Recipe
+- Load all songs from `data/songs.csv`
+- Convert each song into a feature dictionary
+- Compare each song against the user taste profile
+- Produce a numeric score for every song
+- Remove songs below a confidence threshold
+- Sort remaining songs by score in descending order
+- Return the top 5 matched songs
+
+### Potential Biases
+- This system may **over-prioritize genre**, so a great song in a different genre could be ignored even if it fits the user's mood and energy.
+- It also treats mood and genre as exact categories, which can be too strict for users who like mixed or evolving tastes.
+- Because weights favor genre and mood, the system may under-value subtler matches like tempo or acoustic feel.
+
+### Ranking & Selection
+1. Score all songs
+2. Filter out low-confidence matches (score < 0.40)
+3. Sort by score (highest first)
+4. Return top 5 recommendations
 
 ---
 
@@ -68,23 +107,15 @@ You can add more tests in `tests/test_recommender.py`.
 
 ## Experiments You Tried
 
-Use this section to document the experiments you ran. For example:
+I tested the system with a workout-style profile that prefers pop, happy mood, and high energy. The top recommendations were pop and upbeat songs, which matched expectations. I also added new songs in genres like classical, reggae, and metal to check whether the ranking could still surface good matches based on energy and mood.
 
-- What happened when you changed the weight on genre from 2.0 to 0.5
-- What happened when you added tempo or valence to the score
-- How did your system behave for different types of users
+I noticed non-pop songs could still appear if they had the right mood and energy, but genre-match songs stayed at the top.
 
 ---
 
 ## Limitations and Risks
 
-Summarize some limitations of your recommender.
-
-Examples:
-
-- It only works on a tiny catalog
-- It does not understand lyrics or language
-- It might over favor one genre or mood
+This recommender uses a small catalog and does not consider lyrics, artist popularity, or real user listening history. It treats genre and mood as exact categories, so it can miss songs that feel right but are labeled in a different genre. The model also assumes one fixed taste profile per user, which is too narrow for people who like multiple styles.
 
 You will go deeper on this in your model card.
 
@@ -96,11 +127,7 @@ Read and complete `model_card.md`:
 
 [**Model Card**](model_card.md)
 
-Write 1 to 2 paragraphs here about what you learned:
-
-- about how recommenders turn data into predictions
-- about where bias or unfairness could show up in systems like this
-
+I learned that simple recommenders can still behave clearly if the scoring is transparent. It was interesting to see how much genre and mood dominate the result. This project showed me that real music recommenders need more than feature matching to feel truly personal.
 
 ---
 
@@ -208,4 +235,3 @@ A few sentences about what you learned:
 - What surprised you about how your system behaved
 - How did building this change how you think about real music recommenders
 - Where do you think human judgment still matters, even if the model seems "smart"
-
